@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Scanland Timer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="copyright" content="Tous droits réservés à MAVOTCHY Glen">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div style="width:100%;max-width:1200px;box-sizing:border-box;margin:0 auto">
+    <header><h1>📚 Scanland Timer</h1></header>
+
+    <div class="container">
+      <nav style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="primary" onclick="showTab('timerTab')">Timer</button>
+        <button class="ghost" onclick="showTab('subjectsTab')">Matières</button>
+        <button class="ghost" onclick="showTab('historyTab')">Historique</button>
+        <button class="ghost" onclick="showTab('progressTab')">Progression</button>
+      </nav>
+
+      <!-- Timer tab (main) -->
+      <div id="timerTab" class="panel card tab">
+        <section class="section">
+        <label for="subjectSelect">Matière :</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="subjectSelect" style="flex:1;padding:8px;border-radius:8px;border:0;background:rgba(255,255,255,0.02);color:inherit">
+            <option value="">-- Aucune matière --</option>
+          </select>
+          <select id="chapterSelect" style="width:220px;padding:8px;border-radius:8px;border:0;background:rgba(255,255,255,0.02);color:inherit">
+            <option value="">-- Chapitre (optionnel) --</option>
+          </select>
+        </div>
+
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          <input id="newSubjectInput" placeholder="Nouvelle matière (ex: Mathématiques)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+          <input id="newChapterInput" placeholder="Chapitre (optionnel)" style="width:220px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+          <button id="addSubjectBtn" class="ghost" style="padding:8px 10px">Ajouter</button>
+        </div>
+
+        </section>
+
+        <section class="section" style="text-align:center">
+          <div id="timer">00:00:00</div>
+          <div id="topUnderTimer" style="margin-top:12px"></div>
+        </section>
+
+        <section class="section">
+          <div class="controls">
+            <button class="primary" onclick="startTimer()">Démarrer</button>
+            <button class="ghost" onclick="pauseTimer()">Pause</button>
+            <button class="warn" onclick="stopTimer()">Arrêter</button>
+            <button class="ghost" onclick="exportData()">Exporter données</button>
+            <button class="ghost" onclick="importData()">Importer données</button>
+            <input id="importFileInput" type="file" accept="application/json" style="display:none">
+            <button class="warn" onclick="resetData()">Réinitialiser données</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Subjects tab -->
+      <div id="subjectsTab" class="panel tab" style="display:none">
+        <h3>Matières et chapitres</h3>
+        <div id="subjectsList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
+      <!-- History tab -->
+      <div id="historyTab" class="panel tab" style="display:none">
+        <h3>📊 Historique</h3>
+  <div class="table-wrapper">
+          <button class="table-scroll-btn left hidden" aria-label="Scroll left">◀</button>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>Date</th><th>Matière</th><th>Chapitre</th><th>Durée</th><th>Pauses</th></tr>
+              </thead>
+              <tbody id="history"></tbody>
+            </table>
+          </div>
+          <button class="table-scroll-btn right hidden" aria-label="Scroll right">▶</button>
+        </div>
+  <div class="history-cards" id="historyCards"></div>
+      </div>
+
+      <!-- Progress tab -->
+      <div id="progressTab" class="panel tab" style="display:none">
+        <div class="stat">
+          <div>⏳ Temps total cette semaine</div>
+          <div id="totalSemaine" class="value">0 h</div>
+        </div>
+        <div class="stat" style="margin-top:8px">
+          <div>📅 Temps moyen par jour</div>
+          <div id="moyenneJour" class="value">0 h</div>
+        </div>
+        <div class="stat" style="margin-top:8px">
+          <div>🔥 Matière la plus révisée</div>
+          <div id="topMatiere" class="value">-</div>
+        </div>
+
+        <div id="topSubjectsBlock" style="margin-top:12px">
+          <h4 style="margin:6px 0;color:var(--muted);font-size:0.95rem">Top 3 matières</h4>
+
+          <div id="topSubjectsList" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <h3 style="margin:6px 0">📈 Progression</h3>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+            <label style="font-size:0.9rem;color:var(--muted);">Vue :</label>
+            <select id="chartMode" style="padding:6px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:inherit">
+              <option value="thisWeekByDay">Cette semaine (par jour, empilé par matière)</option>
+              <option value="weekly">Par semaine (totaux)</option>
+              <option value="bySubject">Par matière (totaux)</option>
+            </select>
+          </div>
+          <canvas id="weeklyChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js" defer></script>
+
+  <footer style="width:100%;text-align:center;margin-top:18px;color:rgba(230,238,248,0.55);font-size:0.85rem;position:relative;bottom:0">
+    © Tous droits réservés à MAVOTCHY Glen
+  </footer>
+
+</body>
+</html>
