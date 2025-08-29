@@ -337,6 +337,12 @@ function renderTopSubjects(){
 function showTab(id){
   document.querySelectorAll('.tab').forEach(t=> t.style.display = 'none');
   const el = document.getElementById(id); if (!el) return; el.style.display = '';
+  // update active state on nav buttons
+  try{
+    document.querySelectorAll('nav button[data-tab]').forEach(b=>{
+      if (b.getAttribute('data-tab') === id) b.classList.add('active'); else b.classList.remove('active');
+    });
+  }catch(e){/* noop */}
   // refresh according to tab
   if (id === 'historyTab') afficherHistorique();
   if (id === 'progressTab') { updateChart(); updateStats(); }
