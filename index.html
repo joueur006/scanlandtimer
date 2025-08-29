@@ -69,6 +69,13 @@
       <!-- History tab -->
       <div id="historyTab" class="panel tab" style="display:none">
         <h3>📊 Historique</h3>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+    <label for="historyViewMode" style="color:var(--muted);font-size:0.95rem">Vue :</label>
+    <select id="historyViewMode" style="padding:6px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:inherit">
+      <option value="all">Toutes les sessions</option>
+      <option value="bySubject">Par matière</option>
+    </select>
+  </div>
   <div class="table-wrapper">
           <button class="table-scroll-btn left hidden" aria-label="Scroll left">◀</button>
           <div class="table-responsive">
