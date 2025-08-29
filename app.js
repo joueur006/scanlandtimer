@@ -10,6 +10,20 @@ function formatHMS(ms){
   return `${hh}:${mm}:${ss}`;
 }
 
+// format seconds into human readable hours/minutes (e.g. "1 h 23 m" or "18 m")
+function formatHoursFromSeconds(seconds){
+  seconds = Math.round(seconds);
+  const h = Math.floor(seconds/3600);
+  const m = Math.round((seconds % 3600) / 60);
+  if (h > 0) return `${h} h ${m} m`;
+  return `${m} m`;
+}
+
+function formatDecimalHoursToReadable(decimalHours){
+  const seconds = Math.round(decimalHours * 3600);
+  return formatHoursFromSeconds(seconds);
+}
+
 function updateTimer(){
   const now = Date.now();
   const diff = (isRunning ? (now - startTime + elapsed) : elapsed);
@@ -53,20 +67,64 @@ function afficherHistorique(){
   const history = JSON.parse(localStorage.getItem('sessions')||'[]');
   const tbody = document.getElementById('history'); tbody.innerHTML = '';
   const cardsContainer = document.getElementById('historyCards'); if (cardsContainer) cardsContainer.innerHTML = '';
-  history.slice().reverse().forEach(s => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${new Date(s.date).toLocaleString()}</td><td>${s.matiere || '-'}</td><td>${s.chapitre || '-'}</td><td>${s.duree}</td><td>${s.pauses}</td>`;
-    tbody.appendChild(tr);
 
+  const viewModeEl = document.getElementById('historyViewMode');
+  const mode = viewModeEl ? viewModeEl.value : 'all';
+
+  if (mode === 'bySubject'){
+    // group sessions by subject
+    const grouped = {};
+    history.forEach(s => {
+      const key = s.matiere || 'Sans matière';
+      grouped[key] = grouped[key] || { sessions: [], totalSeconds: 0 };
+      grouped[key].sessions.push(s);
+      const seconds = s.dureeMs ? Math.round(s.dureeMs/1000) : (function(){const p=s.duree.split(':');return (+p[0])*3600+(+p[1])*60+(+p[2]);})();
+      grouped[key].totalSeconds += seconds;
+    });
+
+    // render grouped table: subject row with total, then its sessions
+    Object.keys(grouped).sort().forEach(sub => {
+      const g = grouped[sub];
+      const trSummary = document.createElement('tr');
+      const hh = Math.floor(g.totalSeconds/3600); const mm = Math.floor((g.totalSeconds%3600)/60);
+      trSummary.innerHTML = `<td><strong>-</strong></td><td><strong>${sub}</strong></td><td></td><td><strong>${hh}h ${mm}m</strong></td><td></td>`;
+      tbody.appendChild(trSummary);
+      g.sessions.slice().reverse().forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td style="font-size:0.9rem">${new Date(s.date).toLocaleString()}</td><td>${s.matiere || '-'}</td><td>${s.chapitre || '-'}</td><td>${s.duree}</td><td>${s.pauses}</td>`;
+        tbody.appendChild(tr);
+      });
+    });
+
+    // compact cards view grouped
     if (cardsContainer){
-      const card = document.createElement('div'); card.className = 'history-card';
-      const title = document.createElement('div'); title.innerHTML = `<strong>${s.matiere || '-'}</strong> — <span style="color:var(--muted)">${new Date(s.date).toLocaleString()}</span>`;
-      const body = document.createElement('div'); body.textContent = `Chapitre: ${s.chapitre || '-'} • Durée: ${s.duree} • Pauses: ${s.pauses}`;
-      const meta = document.createElement('div'); meta.className = 'meta'; meta.textContent = `Export ID: ${s.date}`;
-      card.appendChild(title); card.appendChild(body); card.appendChild(meta);
-      cardsContainer.appendChild(card);
+      Object.keys(grouped).sort().forEach(sub => {
+        const g = grouped[sub];
+        const div = document.createElement('div'); div.className='history-card';
+        const title = document.createElement('div'); title.innerHTML = `<strong>${sub}</strong> — <span style="color:var(--muted)">${Math.floor(g.totalSeconds/3600)}h ${Math.floor((g.totalSeconds%3600)/60)}m</span>`;
+        div.appendChild(title);
+        g.sessions.slice().reverse().forEach(s => { const p = document.createElement('div'); p.textContent = `${new Date(s.date).toLocaleString()} — ${s.chapitre || '-'} • ${s.duree}`; div.appendChild(p); });
+        cardsContainer.appendChild(div);
+      });
     }
-  });
+
+  } else {
+    // default: flat list
+    history.slice().reverse().forEach(s => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${new Date(s.date).toLocaleString()}</td><td>${s.matiere || '-'}</td><td>${s.chapitre || '-'}</td><td>${s.duree}</td><td>${s.pauses}</td>`;
+      tbody.appendChild(tr);
+
+      if (cardsContainer){
+        const card = document.createElement('div'); card.className = 'history-card';
+        const title = document.createElement('div'); title.innerHTML = `<strong>${s.matiere || '-'}</strong> — <span style="color:var(--muted)">${new Date(s.date).toLocaleString()}</span>`;
+        const body = document.createElement('div'); body.textContent = `Chapitre: ${s.chapitre || '-'} • Durée: ${s.duree} • Pauses: ${s.pauses}`;
+        const meta = document.createElement('div'); meta.className = 'meta'; meta.textContent = `Export ID: ${s.date}`;
+        card.appendChild(title); card.appendChild(body); card.appendChild(meta);
+        cardsContainer.appendChild(card);
+      }
+    });
+  }
   // init scroll controls for table
   initTableScroll();
 }
@@ -163,21 +221,46 @@ function updateChart(mode){
     chart = new Chart(document.getElementById('weeklyChart'),{
       type: 'bar',
       data: d,
-      options: { scales: { x:{ stacked:true }, y:{ beginAtZero:true, stacked:true } }, plugins: { tooltip:{mode:'index',intersect:false} } }
+      options: {
+  scales: { x:{ stacked:true }, y:{ beginAtZero:true, stacked:true, ticks:{ callback: v => formatDecimalHoursToReadable(Number(v) || 0) } } },
+        plugins: {
+          tooltip:{
+            mode:'index',intersect:false,
+            callbacks: {
+              label: function(ctx){ const val = ctx.raw; return ctx.dataset.label + ': ' + formatDecimalHoursToReadable(val); }
+            }
+          }
+        }
+      }
     });
     return;
   }
 
   if (mode === 'bySubject'){
     const d = getTotalsBySubject();
-    chart = new Chart(document.getElementById('weeklyChart'),{ type:'bar', data: d, options:{indexAxis:'y',scales:{x:{beginAtZero:true}}} });
+    chart = new Chart(document.getElementById('weeklyChart'),{
+      type:'bar',
+      data: d,
+      options:{
+        indexAxis:'y',
+  scales:{ x:{ beginAtZero:true, ticks:{ callback: v => formatDecimalHoursToReadable(Number(v) || 0) } } },
+  plugins:{ tooltip:{ callbacks:{ label: function(ctx){ const val = ctx.raw; return ctx.dataset.label + ': ' + formatDecimalHoursToReadable(val); } } } }
+      }
+    });
     return;
   }
 
   // fallback: weekly totals
   const weekly = getWeeklyData();
   const labels = Object.keys(weekly); const data = Object.values(weekly).map(v=>+v.toFixed(2));
-  chart = new Chart(document.getElementById('weeklyChart'),{type:'bar',data:{labels, datasets:[{label:'Heures',data,backgroundColor:'#60a5fa'}]},options:{scales:{y:{beginAtZero:true}}}});
+    chart = new Chart(document.getElementById('weeklyChart'),{
+    type:'bar',
+    data:{labels, datasets:[{label:'Heures',data,backgroundColor:'#60a5fa'}]},
+    options:{
+  scales:{ y:{ beginAtZero:true, ticks:{ callback: v => formatDecimalHoursToReadable(Number(v) || 0) } } },
+  plugins:{ tooltip:{ callbacks:{ label: function(ctx){ const val = ctx.raw; return ctx.dataset.label + ': ' + formatDecimalHoursToReadable(val); } } } }
+    }
+  });
 }
 
 // Subjects -> chapters management (stored as object { subject: string, chapters: [string] })
@@ -260,6 +343,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('addSubjectBtn').addEventListener('click', ()=>{
     const name = document.getElementById('newSubjectInput').value.trim(); const ch = document.getElementById('newChapterInput').value.trim(); if (!name) return; addSubject(name, ch); document.getElementById('newSubjectInput').value = ''; document.getElementById('newChapterInput').value = '';
   });
+
+  const histMode = document.getElementById('historyViewMode'); if (histMode) histMode.addEventListener('change', ()=> afficherHistorique());
 });
 
 // Stats: this week
@@ -274,8 +359,8 @@ function updateStats(){
   });
   const totalHeures = (totalSeconds/3600).toFixed(2); const moyenne = (jours.size? (totalSeconds/3600/jours.size).toFixed(2) : '0.00');
   let top = '-'; if (Object.keys(matieres).length) top = Object.entries(matieres).sort((a,b)=>b[1]-a[1])[0][0];
-  document.getElementById('totalSemaine').textContent = totalHeures + ' h';
-  document.getElementById('moyenneJour').textContent = moyenne + ' h';
+  document.getElementById('totalSemaine').textContent = formatHoursFromSeconds(totalSeconds);
+  document.getElementById('moyenneJour').textContent = formatHoursFromSeconds(Math.round(totalSeconds / (jours.size||1)));
   document.getElementById('topMatiere').textContent = top;
   renderTopSubjects();
 }
