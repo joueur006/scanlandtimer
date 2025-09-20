@@ -1,165 +1,89 @@
-/* Theme variables — defaults (light). Dark overrides below using prefers-color-scheme */
+/* Thème et variables (inchangé) */
 :root{
-  /* Backgrounds */
-  --bg1: #f5f7fb;
-  --bg2: #eef4fb;
-  /* glass/card */
-  --glass: rgba(11,17,34,0.04);
-  --card: rgba(11,17,34,0.03);
-  --glass-border: rgba(11,17,34,0.06);
-  /* text */
-  --text: #0b1220;
-  --muted: #4b5563;
-  /* accents */
-  --primary: #1d4ed8; /* blue */
-  --accent: #06b6d4; /* teal */
-  --success: #059669;
-  --danger: #dc2626;
-  --button-text: #ffffff;
-  --card-bg-gradient: linear-gradient(180deg, rgba(11,17,34,0.02), rgba(11,17,34,0.01));
+  --bg1: #f5f7fb; --bg2: #eef4fb; --glass: rgba(11,17,34,0.04); --card: rgba(11,17,34,0.03); --glass-border: rgba(11,17,34,0.06); --text: #0b1220; --muted: #4b5563; --primary: #1d4ed8; --accent: #06b6d4; --success: #059669; --danger: #dc2626; --button-text: #ffffff; --card-bg-gradient: linear-gradient(180deg, rgba(11,17,34,0.02), rgba(11,17,34,0.01));
 }
-
-/* Dark theme overrides */
 @media (prefers-color-scheme: dark){
   :root{
-    --bg1: #071228;
-    --bg2: #081a2b;
-    --glass: rgba(255,255,255,0.04);
-    --card: rgba(255,255,255,0.03);
-    --glass-border: rgba(255,255,255,0.06);
-    --text: #e6eef8;
-    --muted: #9fb0c8;
-    --primary: #4f46e5;
-    --accent: #5eead4;
-    --success: #34d399;
-    --danger: #fb7185;
-    --button-text: #ffffff;
-    --card-bg-gradient: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    --bg1: #071228; --bg2: #081a2b; --glass: rgba(255,255,255,0.04); --card: rgba(255,255,255,0.03); --glass-border: rgba(255,255,255,0.06); --text: #e6eef8; --muted: #9fb0c8; --primary: #4f46e5; --accent: #5eead4; --success: #34d399; --danger: #fb7185; --button-text: #ffffff; --card-bg-gradient: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   }
 }
 
 /* Page */
-html,body{height:100%;margin:0;padding:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px;box-sizing:border-box;min-height:100vh}
+html,body{height:100%;margin:0;padding:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:var(--text);box-sizing:border-box;min-height:100vh}
+.page-wrapper{width:100%;max-width:1200px;margin:0 auto;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;min-height:100%}
+main.container{flex:1}
 
-/* Card container */
-.container{width:clamp(375px,90vw,1100px);display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start}
-@media (max-width:1444px){.container{grid-template-columns:1fr}}
-
+/* Conteneur principal */
+.container{width:100%;display:flex;flex-direction:column;gap:20px;align-items:stretch}
 .panel{background:var(--card-bg-gradient);border-radius:14px;padding:18px;border:1px solid var(--glass-border);box-shadow:0 10px 30px rgba(2,6,23,0.06);backdrop-filter:blur(8px)}
-
 header{display:flex;align-items:center;gap:14px;margin-bottom:10px}
 h1{font-size:1.4rem;margin:0}
 
-/* Timer card */
-.card{padding:18px;border-radius:12px}
+/* Sections */
+.section{margin-top:12px;padding:12px;border-radius:10px;background:var(--card-bg-gradient);border:1px solid var(--glass-border)}
+.section:first-child{margin-top:0}
+
+/* Timer */
+#timer{font-family:'Roboto Mono',monospace;font-size:clamp(2.5rem,8vw,4rem);text-align:center;color:var(--accent);letter-spacing:1.6px;padding:8px}
+
+/* Contrôles et boutons */
 .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;justify-content:center}
-button{cursor:pointer;border:0;padding:10px 16px;border-radius:10px;font-weight:700;color:var(--button-text);box-shadow:0 6px 18px rgba(2,6,23,0.12);transition:transform .12s ease,box-shadow .12s ease}
+button{cursor:pointer;border:0;padding:10px 16px;border-radius:10px;font-weight:700;color:var(--button-text);box-shadow:0 6px 18px rgba(2,6,23,0.12);transition:transform .12s ease,box-shadow .12s ease, background-color .12s ease, opacity .12s ease}
 button:active{transform:translateY(2px)}
 .primary{background:linear-gradient(90deg,var(--primary),var(--accent))}
 .ghost{background:transparent;border:1px solid var(--glass-border);color:var(--muted);box-shadow:none}
 .warn{background:linear-gradient(90deg,var(--danger),#fb8db1)}
+button:disabled{cursor:not-allowed;opacity:0.5;transform:none;box-shadow:none}
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-#timer{font-family: 'Roboto Mono', monospace;font-size: clamp(28px, 6vw, 48px);text-align:center;color:var(--accent);letter-spacing:1.6px;padding:8px}
+/* Inputs & Selects */
+input, select.select-css {
+  padding:8px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:inherit;font-family:inherit;font-size:1rem;
+}
 
-select#matiere{width:100%;padding:8px;border-radius:8px;border:0;background:var(--card);color:var(--text);margin-top:8px}
-
-/* Right column: stats */
-.stats{display:flex;flex-direction:column;gap:12px}
-.stat{background:var(--card-bg-gradient);padding:12px;border-radius:10px;text-align:center}
-.stat .value{font-size:1.25rem;font-weight:800;color:var(--primary)}
+/* Navigation */
+nav{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+nav button{flex:1 1 auto}
+nav button.active{background:linear-gradient(90deg,var(--primary),var(--accent)); color:var(--button-text); box-shadow:0 8px 30px rgba(2,6,23,0.08)}
 
 /* Table */
 table{width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed}
-thead th{background:linear-gradient(90deg,var(--primary),var(--accent));padding:10px;border-radius:6px;color:var(--button-text);text-align:left}
+thead th{background:rgba(0,0,0,0.1);padding:10px;border-radius:6px;text-align:left;font-weight:600}
 tbody td{padding:10px;color:var(--muted);border-top:1px solid var(--glass-border);word-break:break-word}
+.table-wrapper{position:relative}
 .table-responsive{overflow-x:auto;-webkit-overflow-scrolling:touch}
-@media (max-width:480px){
-  table{min-width:600px}
-}
+@media (max-width:768px){ table{min-width:600px} }
 
-/* history cards for small screens */
+/* Cartes d'historique (mobile) */
 .history-cards{display:none;flex-direction:column;gap:10px}
 .history-card{background:var(--card);padding:10px;border-radius:8px;border:1px solid var(--glass-border)}
-.history-card .meta{color:var(--muted);font-size:0.9rem;margin-top:6px}
+@media (max-width:768px){ .table-wrapper{display:none} .history-cards{display:flex} }
+.table-scroll-btn{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,0.1);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10}
+.table-scroll-btn.left{left:6px} .table-scroll-btn.right{right:6px} .table-scroll-btn.hidden{display:none}
 
-/* on small screens, hide table and show cards */
-@media (max-width:768px){
-  .table-wrapper{display:none}
-  .history-cards{display:flex}
-}
+/* Styles pour les listes et états vides */
+.subjects-list { display: flex; flex-direction: column; gap: 8px; }
+.empty-state { text-align: center; padding: 20px; color: var(--muted); font-style: italic; }
 
-/* horizontal scroll controls for wide tables */
-.table-wrapper{position:relative}
-.table-scroll-btn{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,0.06);color:var(--button-text);display:flex;align-items:center;justify-content:center;cursor:pointer}
-.table-scroll-btn.left{left:6px}
-.table-scroll-btn.right{right:6px}
-.table-scroll-btn.hidden{display:none}
+/* Barre de Notification */
+.notification { position: fixed; top: 0; left: 50%; transform: translateX(-50%); background-color: var(--primary); color: white; padding: 12px 24px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; transition: transform 0.3s ease, top 0.3s ease; }
+.notification.hidden { top: -100px; }
+.notification.success { background-color: var(--success); }
+.notification.error { background-color: var(--danger); }
 
-/* Chart */
-canvas{max-width:100%;height:220px}
-
-/* custom subjects UI */
-#newSubjectInput{width:100%;padding:8px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text)}
-.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--card);border:1px solid var(--glass-border);color:var(--muted);font-size:0.9rem}
-.chip button{background:transparent;border:0;color:var(--muted);cursor:pointer;padding:0 6px}
-
-/* light mode fallback */
-@media (prefers-color-scheme: light){:root{--bg1:#eef6ff;--bg2:#f5fbff;color:#0b1220;--muted:#475569}}
-
-/* responsive tweaks */
-@media (max-width:600px){
-  nav{flex-wrap:wrap}
-  nav button{flex:1 1 48%;margin-bottom:6px}
-  .controls{flex-direction:column}
-  #chapterSelect{width:100%!important}
-  #newChapterInput{width:100%!important}
-}
-
-  /* Navigation active state */
-  nav button.active{background:linear-gradient(90deg,var(--primary),var(--accent)); color:var(--button-text); box-shadow:0 8px 30px rgba(2,6,23,0.08)}
-  nav button.primary.active{background:linear-gradient(90deg,var(--primary),var(--accent))}
-  nav button:focus{outline:2px solid rgba(29,78,216,0.12)}
-
-/* Mobile: ensure the subject add row wraps and inputs + button are visible */
-@media (max-width:600px) {
-  /* make the section rows stack vertically and allow children to shrink */
-  .section > div { display:flex; flex-direction:column; gap:8px; align-items:stretch; }
-  /* Ensure inputs and selects take full width and don't overflow */
-  #newSubjectInput, #newChapterInput, #chapterSelect, #subjectSelect, #addSubjectBtn {
-    width:100% !important;
-    box-sizing:border-box;
-    min-width:0;
-  }
-  /* Make the add button visually consistent on mobile */
-  #addSubjectBtn { padding:10px; }
-}
-
-/* compact top list under timer */
-#topUnderTimer .item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--glass-border);margin-bottom:8px}
-#topUnderTimer .item .meta{color:var(--muted);font-size:0.9rem}
-
-/* semantic sections for clearer layout */
-.section{margin-top:12px;padding:12px;border-radius:10px;background:var(--card-bg-gradient);border:1px solid var(--glass-border)}
-.section h4{margin:0 0 8px 0}
-
-/* top list readability: allow wrapping and spacing */
-#topSubjectsList > div{display:flex;gap:10px;align-items:flex-start}
-#topSubjectsList > div > div{flex:1;min-width:0}
-#topSubjectsList strong{display:block}
-#topSubjectsList .meta, #topSubjectsList div div{white-space:normal;word-break:break-word;color:var(--muted)}
-#topSubjectsList div div div{margin-top:4px}
-/* ensure compact top under timer wraps nicely */
-#topUnderTimer .item{flex-wrap:wrap}
-#topUnderTimer .item div{min-width:0}
-#topUnderTimer .meta{white-space:normal;word-break:break-word}
-
-/* give more breathing room for chapter list */
-#subjectsList div{padding:10px}
-
-/* top card and chapter blocks */
+/* Divers */
+canvas{max-width:100%;height:auto}
+.stat{background:var(--card-bg-gradient);padding:12px;border-radius:10px}
+.stat .value{font-size:1.25rem;font-weight:800;color:var(--primary)}
 .top-card{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:8px;background:var(--card);border:1px solid var(--glass-border);margin-bottom:8px}
 .top-card .content{flex:1;min-width:0}
 .chapters{margin-top:6px;display:flex;flex-direction:column;gap:4px}
 .chapter{color:var(--muted);font-size:0.9rem;word-break:break-word}
 
-/* End of theme-aware styles */
+/* Responsive mobile */
+@media (max-width:600px) {
+  .page-wrapper{padding:16px}
+  .section > div { display:flex; flex-direction:column; gap:8px; align-items:stretch; }
+  #newSubjectInput, #newChapterInput, #chapterSelect, #subjectSelect, #addSubjectBtn { width:100% !important; box-sizing:border-box; min-width:0; }
+  #addSubjectBtn { padding:10px; }
+}
