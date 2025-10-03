@@ -7,6 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let elapsed = 0;
     let startTime, timerInterval;
 
+    // Pomodoro State
+    let pomodoroEnabled = false;
+    let pomodoroState = 'work'; // 'work', 'short_break', 'long_break'
+    let pomodoroCycle = 0;
+    const POMODORO_DURATIONS = {
+        work: 25 * 60 * 1000,
+        short_break: 5 * 60 * 1000,
+        long_break: 15 * 60 * 1000,
+    };
+    let remainingTime = 0;
+
     // --- DOM ELEMENTS CACHING ---
     const dom = {
         timerDisplay: document.getElementById('timer'),
@@ -34,6 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
         chartMode: document.getElementById('chartMode'),
         navButtons: document.querySelectorAll('nav button[data-tab]'),
         tabs: document.querySelectorAll('.panel.tab'),
+        pomodoroToggle: document.getElementById('pomodoroToggle'),
+        pomodoroStatus: document.getElementById('pomodoro-status'),
     };
 
     // --- UTILITY FUNCTIONS ---
@@ -48,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showNotification = (message, type = 'success', duration = 3000) => {
         dom.notification.textContent = message;
         dom.notification.className = `notification ${type}`;
+        dom.notification.classList.remove('hidden');
         setTimeout(() => dom.notification.classList.add('hidden'), duration);
     };
 
@@ -80,6 +94,21 @@ document.addEventListener('DOMContentLoaded', () => {
         renderChart();
     };
 
+    const updatePomodoroUI = () => {
+        const statusText = {
+            work: `Cycle ${pomodoroCycle + 1}: Au travail !`,
+            short_break: 'Pause Courte',
+            long_break: 'Pause Longue'
+        };
+        dom.pomodoroStatus.textContent = pomodoroEnabled ? statusText[pomodoroState] : '';
+
+        document.body.classList.remove('state-work', 'state-break');
+        if (pomodoroEnabled) {
+            document.body.classList.add(pomodoroState === 'work' ? 'state-work' : 'state-break');
+        }
+    };
+
+    // ... (other rendering functions remain the same)
     const renderSubjectSelects = () => {
         const currentSubject = dom.subjectSelect.value;
         const currentChapter = dom.chapterSelect.value;
@@ -205,64 +234,129 @@ document.addEventListener('DOMContentLoaded', () => {
         chart = new Chart(ctx, { type: 'bar', data, options: { scales: { y: { beginAtZero: true } } } });
     };
 
-    // --- TIMER LOGIC ---
+    // --- POMODORO & TIMER LOGIC ---
+    const handlePomodoroTransition = () => {
+        clearInterval(timerInterval);
+        isRunning = false;
+
+        if (pomodoroState === 'work') {
+            const session = {
+                date: new Date().toISOString(),
+                matiere: dom.subjectSelect.value || 'Pomodoro',
+                chapitre: dom.chapterSelect.value,
+                duree: formatHMS(POMODORO_DURATIONS.work),
+                dureeMs: POMODORO_DURATIONS.work,
+                pauses: "0s"
+            };
+            allSessions.push(session);
+            saveData('sessions', allSessions);
+            updateAllUI();
+            pomodoroCycle++;
+        }
+
+        pomodoroState = (pomodoroState === 'work')
+            ? ((pomodoroCycle % 4 === 0) ? 'long_break' : 'short_break')
+            : 'work';
+
+        const message = pomodoroState === 'work' ? "Au travail !" : (pomodoroState === 'long_break' ? "C'est l'heure d'une longue pause !" : "Petite pause !");
+        showNotification(message, 'success');
+
+        startTimer();
+    };
+
     const updateTimerDisplay = () => {
-        const now = Date.now();
-        const diff = isRunning ? (now - startTime + elapsed) : elapsed;
-        dom.timerDisplay.textContent = formatHMS(diff);
+        if (pomodoroEnabled && isRunning) {
+            remainingTime -= 1000;
+            if (remainingTime < 0) remainingTime = 0;
+            dom.timerDisplay.textContent = formatHMS(remainingTime);
+            if (remainingTime <= 0) {
+                handlePomodoroTransition();
+            }
+        } else if (!pomodoroEnabled && isRunning) {
+            const diff = Date.now() - startTime + elapsed;
+            dom.timerDisplay.textContent = formatHMS(diff);
+        }
     };
 
     const startTimer = () => {
         if (isRunning) return;
         isRunning = true;
-        startTime = Date.now();
+
+        if (pomodoroEnabled) {
+            remainingTime = POMODORO_DURATIONS[pomodoroState];
+            dom.timerDisplay.textContent = formatHMS(remainingTime);
+            updatePomodoroUI();
+        } else {
+            startTime = Date.now();
+        }
+
         timerInterval = setInterval(updateTimerDisplay, 1000);
         updateButtonStates();
         dom.pauseButton.textContent = 'Pause';
     };
 
     const pauseTimer = () => {
-        if (!isRunning) {
+        if (!isRunning) { // Resume
             startTimer();
             return;
         }
         clearInterval(timerInterval);
-        elapsed += Date.now() - startTime;
+        if (!pomodoroEnabled) {
+             elapsed += Date.now() - startTime;
+        }
         isRunning = false;
         updateButtonStates();
         dom.pauseButton.textContent = 'Reprendre';
     };
 
     const stopTimer = () => {
-        if (isRunning) {
-            pauseTimer();
-            isRunning = false; // pauseTimer sets it to false, but just to be sure
+        clearInterval(timerInterval);
+        isRunning = false;
+
+        if (pomodoroEnabled) {
+            if (pomodoroState === 'work' && remainingTime < POMODORO_DURATIONS.work) {
+                 if (!confirm("Voulez-vous arrêter ce cycle de travail ? La progression ne sera pas sauvegardée.")) {
+                    startTimer(); // restart if user cancels
+                    return;
+                 }
+            }
+            pomodoroState = 'work';
+            pomodoroCycle = 0;
+            remainingTime = POMODORO_DURATIONS.work;
+            dom.timerDisplay.textContent = formatHMS(remainingTime);
+        } else {
+            if (elapsed === 0) return;
+            const session = {
+                date: new Date().toISOString(),
+                matiere: dom.subjectSelect.value,
+                chapitre: dom.chapterSelect.value,
+                duree: formatHMS(elapsed),
+                dureeMs: elapsed,
+                pauses: "0s"
+            };
+            allSessions.push(session);
+            saveData('sessions', allSessions);
+            elapsed = 0;
+            dom.timerDisplay.textContent = formatHMS(0);
+            updateAllUI();
+            showNotification('Session enregistrée !');
         }
 
-        if (elapsed === 0) return;
-
-        const session = {
-            date: new Date().toISOString(),
-            matiere: dom.subjectSelect.value,
-            chapitre: dom.chapterSelect.value,
-            duree: formatHMS(elapsed),
-            dureeMs: elapsed,
-            pauses: "0s" // Placeholder
-        };
-        allSessions.push(session);
-        saveData('sessions', allSessions);
-
-        elapsed = 0;
-        updateTimerDisplay();
+        updatePomodoroUI();
         updateButtonStates();
-        updateAllUI();
-        showNotification('Session enregistrée !');
     };
 
     const updateButtonStates = () => {
-        dom.startButton.disabled = isRunning || elapsed > 0;
-        dom.pauseButton.disabled = !isRunning && elapsed === 0;
-        dom.stopButton.disabled = !isRunning && elapsed === 0;
+        const regularTimerRunning = !pomodoroEnabled && (isRunning || elapsed > 0);
+        const pomodoroTimerRunning = pomodoroEnabled && isRunning;
+
+        dom.startButton.disabled = regularTimerRunning || pomodoroTimerRunning;
+        dom.pauseButton.disabled = !isRunning;
+        dom.stopButton.disabled = !regularTimerRunning && !pomodoroTimerRunning;
+
+        dom.subjectSelect.disabled = pomodoroTimerRunning;
+        dom.chapterSelect.disabled = pomodoroTimerRunning;
+        dom.pomodoroToggle.disabled = isRunning;
     };
 
     // --- EVENT LISTENERS ---
@@ -271,6 +365,26 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.pauseButton.addEventListener('click', pauseTimer);
         dom.stopButton.addEventListener('click', stopTimer);
 
+        dom.pomodoroToggle.addEventListener('change', (e) => {
+            pomodoroEnabled = e.target.checked;
+            clearInterval(timerInterval);
+            isRunning = false;
+            elapsed = 0;
+
+            if (pomodoroEnabled) {
+                pomodoroState = 'work';
+                pomodoroCycle = 0;
+                remainingTime = POMODORO_DURATIONS.work;
+                dom.timerDisplay.textContent = formatHMS(remainingTime);
+            } else {
+                remainingTime = 0;
+                dom.timerDisplay.textContent = formatHMS(0);
+            }
+            updatePomodoroUI();
+            updateButtonStates();
+        });
+
+        // ... (other event listeners)
         dom.addSubjectBtn.addEventListener('click', () => {
             const name = dom.newSubjectInput.value.trim();
             const chapter = dom.newChapterInput.value.trim();
@@ -311,7 +425,10 @@ document.addEventListener('DOMContentLoaded', () => {
             button.addEventListener('click', () => {
                 const tabId = button.dataset.tab;
                 dom.tabs.forEach(tab => tab.style.display = tab.id === tabId ? 'block' : 'none');
-                dom.navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
+                dom.navButtons.forEach(btn => {
+                    btn.setAttribute('aria-selected', btn.dataset.tab === tabId);
+                    btn.classList.toggle('active', btn.dataset.tab === tabId);
+                });
             });
         });
 
@@ -323,9 +440,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 elapsed = 0;
                 if(isRunning) clearInterval(timerInterval);
                 isRunning = false;
+                pomodoroEnabled = false;
+                dom.pomodoroToggle.checked = false;
                 updateTimerDisplay();
                 updateButtonStates();
                 updateAllUI();
+                updatePomodoroUI();
                 showNotification('Données réinitialisées.', 'success');
             }
         });
@@ -378,9 +498,10 @@ document.addEventListener('DOMContentLoaded', () => {
         loadData();
         setupEventListeners();
         updateButtonStates();
-        document.querySelector('nav button[data-tab="timerTab"]').click(); // Show default tab
+        document.querySelector('nav button[data-tab="timerTab"]').click();
         updateAllUI();
-        updateTimerDisplay();
+        updatePomodoroUI();
+        dom.timerDisplay.textContent = formatHMS(0);
     };
 
     init();

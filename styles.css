@@ -262,6 +262,67 @@ canvas { max-width: 100%; height: auto; margin-top: 1rem; }
   border: 1px solid var(--glass-border);
 }
 
+/* --- POMODORO --- */
+.pomodoro-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.toggle-label {
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  background-color: var(--glass-border);
+  border-radius: 28px;
+  transition: background-color 0.2s;
+  /* Hide text but keep it accessible */
+  text-indent: -9999px;
+  white-space: nowrap;
+  font-size: 0;
+}
+
+.toggle-label::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: white;
+  top: 4px;
+  left: 4px;
+  transition: transform 0.2s;
+}
+
+#pomodoroToggle:checked + .toggle-label {
+  background-color: var(--primary);
+}
+
+#pomodoroToggle:checked + .toggle-label::after {
+  transform: translateX(22px);
+}
+
+#pomodoro-status {
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 150px; /* Prevent layout shift */
+  text-align: left;
+}
+
+/* State-based background changes */
+body.state-work {
+  background: linear-gradient(135deg, var(--danger-accent), var(--bg2));
+}
+
+body.state-break {
+  background: linear-gradient(135deg, var(--accent), var(--bg2));
+}
+
+
 /* --- RESPONSIVE DESIGN --- */
 @media (max-width: 768px) {
   .page-wrapper { padding: 1rem; }
