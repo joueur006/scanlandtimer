@@ -3,122 +3,213 @@ document.addEventListener('DOMContentLoaded', () => {
     let allSessions = [];
     let allSubjects = [];
     let chart;
-
-    // Timer state
-    let startTime, timerInterval;
-    let elapsed = 0;
     let isRunning = false;
+    let elapsed = 0;
+    let startTime, timerInterval;
 
-    // --- DOM ELEMENTS ---
-    const timerDisplay = document.getElementById('timer');
-    const startButton = document.getElementById('startButton');
-    const pauseButton = document.getElementById('pauseButton');
-    const stopButton = document.getElementById('stopButton');
-    // ... (Get all other necessary DOM elements here to avoid repeated queries)
+    // --- DOM ELEMENTS CACHING ---
+    const dom = {
+        timerDisplay: document.getElementById('timer'),
+        startButton: document.getElementById('startButton'),
+        pauseButton: document.getElementById('pauseButton'),
+        stopButton: document.getElementById('stopButton'),
+        exportButton: document.getElementById('exportButton'),
+        importButton: document.getElementById('importButton'),
+        resetButton: document.getElementById('resetButton'),
+        importFileInput: document.getElementById('importFileInput'),
+        subjectSelect: document.getElementById('subjectSelect'),
+        chapterSelect: document.getElementById('chapterSelect'),
+        newSubjectInput: document.getElementById('newSubjectInput'),
+        newChapterInput: document.getElementById('newChapterInput'),
+        addSubjectBtn: document.getElementById('addSubjectBtn'),
+        notification: document.getElementById('notification'),
+        historyBody: document.getElementById('history'),
+        historyCards: document.getElementById('historyCards'),
+        subjectsList: document.getElementById('subjectsList'),
+        totalSemaine: document.getElementById('totalSemaine'),
+        moyenneJour: document.getElementById('moyenneJour'),
+        topMatiere: document.getElementById('topMatiere'),
+        topSubjectsList: document.getElementById('topSubjectsList'),
+        chartCanvas: document.getElementById('weeklyChart'),
+        chartMode: document.getElementById('chartMode'),
+        navButtons: document.querySelectorAll('nav button[data-tab]'),
+        tabs: document.querySelectorAll('.panel.tab'),
+    };
 
     // --- UTILITY FUNCTIONS ---
     const formatHMS = (ms) => {
-        const s = Math.floor(ms / 1000);
-        const hh = Math.floor(s / 3600).toString().padStart(2, '0');
-        const mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
-        const ss = (s % 60).toString().padStart(2, '0');
-        return `${hh}:${mm}:${ss}`;
+        const totalSeconds = Math.floor(ms / 1000);
+        const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (totalSeconds % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
     };
 
-    const getSessionDurationInSeconds = (session) => {
-        if (session.dureeMs) {
-            return Math.round(session.dureeMs / 1000);
-        }
-        const parts = session.duree.split(':');
-        return (+parts[0]) * 3600 + (+parts[1]) * 60 + (+parts[2]);
-    };
-    
-    const showNotification = (message, type = 'success') => {
-        const notification = document.getElementById('notification');
-        notification.textContent = message;
-        notification.className = `notification ${type}`;
-        setTimeout(() => {
-            notification.classList.add('hidden');
-        }, 3000);
+    const showNotification = (message, type = 'success', duration = 3000) => {
+        dom.notification.textContent = message;
+        dom.notification.className = `notification ${type}`;
+        setTimeout(() => dom.notification.classList.add('hidden'), duration);
     };
 
     // --- DATA HANDLING ---
-    const loadDataFromStorage = () => {
-        allSessions = JSON.parse(localStorage.getItem('sessions') || '[]');
-        allSubjects = JSON.parse(localStorage.getItem('subjects') || '[]');
+    const loadData = () => {
+        try {
+            allSessions = JSON.parse(localStorage.getItem('sessions') || '[]');
+            allSubjects = JSON.parse(localStorage.getItem('subjects') || '[]');
+        } catch (e) {
+            console.error("Erreur lors du chargement des données:", e);
+            showNotification("Erreur de chargement des données.", "error");
+        }
     };
 
-    const saveSessionsToStorage = () => {
-        localStorage.setItem('sessions', JSON.stringify(allSessions));
+    const saveData = (key, data) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (e) {
+            console.error(`Erreur lors de la sauvegarde de ${key}:`, e);
+            showNotification(`Erreur de sauvegarde.`, "error");
+        }
     };
-
-    const saveSubjectsToStorage = () => {
-        localStorage.setItem('subjects', JSON.stringify(allSubjects));
-    };
-
 
     // --- UI RENDERING ---
     const updateAllUI = () => {
-        // This function calls all rendering functions.
-        // It's a single point of update after data changes.
-        populateSubjectAndChapterSelects();
+        renderSubjectSelects();
         renderSubjectsList();
-        afficherHistorique();
-        updateStats();
-        updateChart();
-    };
-    
-    const afficherHistorique = () => {
-        const tbody = document.getElementById('history');
-        tbody.innerHTML = '';
-        if (allSessions.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Aucune session enregistrée pour le moment.</td></tr>`;
-            return;
-        }
-        // ... (The rest of your 'afficherHistorique' logic goes here, but using 'allSessions' array)
-        // For brevity, I'll keep the logic, but remember to replace 'history' with 'allSessions'
-        const history = allSessions;
-        history.slice().reverse().forEach(s => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${new Date(s.date).toLocaleString()}</td><td>${s.matiere || '-'}</td><td>${s.chapitre || '-'}</td><td>${s.duree}</td><td>${s.pauses || '0s'}</td>`;
-            tbody.appendChild(tr);
-        });
-    };
-    
-    const renderSubjectsList = () => {
-        const container = document.getElementById('subjectsList');
-        container.innerHTML = '';
-        if (allSubjects.length === 0) {
-            container.innerHTML = `<div class="empty-state">Aucune matière ajoutée.</div>`;
-            return;
-        }
-        allSubjects.forEach((s, i) => {
-            // ... (Your 'renderSubjectsList' logic, but using 'allSubjects' array)
-            const div = document.createElement('div');
-            div.style.display='flex';
-            div.innerHTML = `<div><strong>${s.name}</strong></div>`; // Simplified for brevity
-            container.appendChild(div);
-        });
-    };
-    
-    const populateSubjectAndChapterSelects = () => {
-        // ... (Your logic, using 'allSubjects')
+        renderHistory();
+        renderStats();
+        renderChart();
     };
 
-    const updateStats = () => {
-        // ... (Your logic, using 'allSessions')
+    const renderSubjectSelects = () => {
+        const currentSubject = dom.subjectSelect.value;
+        const currentChapter = dom.chapterSelect.value;
+        dom.subjectSelect.innerHTML = '<option value="">-- Aucune matière --</option>';
+        allSubjects.forEach(s => {
+            const option = new Option(s.name, s.name);
+            dom.subjectSelect.add(option);
+        });
+        dom.subjectSelect.value = currentSubject;
+        renderChapterSelect(currentSubject);
+        dom.chapterSelect.value = currentChapter;
     };
-    
-    const updateChart = () => {
-        // ... (Your logic, using 'allSessions')
+
+    const renderChapterSelect = (subjectName) => {
+        dom.chapterSelect.innerHTML = '<option value="">-- Chapitre (optionnel) --</option>';
+        const subject = allSubjects.find(s => s.name === subjectName);
+        if (subject && subject.chapters) {
+            subject.chapters.forEach(chap => {
+                const option = new Option(chap, chap);
+                dom.chapterSelect.add(option);
+            });
+        }
     };
-    
+
+    const renderSubjectsList = () => {
+        dom.subjectsList.innerHTML = '';
+        if (allSubjects.length === 0) {
+            dom.subjectsList.innerHTML = `<div class="empty-state">Aucune matière ajoutée.</div>`;
+            return;
+        }
+        allSubjects.forEach((subject, index) => {
+            const card = document.createElement('div');
+            card.className = 'top-card';
+            card.innerHTML = `
+                <div class="content">
+                    <strong>${subject.name}</strong>
+                    <div class="chapters">
+                        ${(subject.chapters || []).map(c => `<span class="chapter">${c}</span>`).join('')}
+                    </div>
+                </div>
+                <button data-index="${index}" class="warn delete-subject-btn" style="padding: 8px 10px;">X</button>
+            `;
+            dom.subjectsList.appendChild(card);
+        });
+    };
+
+    const renderHistory = () => {
+        dom.historyBody.innerHTML = '';
+        dom.historyCards.innerHTML = '';
+        if (allSessions.length === 0) {
+            dom.historyBody.innerHTML = `<tr><td colspan="5" class="empty-state">Aucune session.</td></tr>`;
+            dom.historyCards.innerHTML = `<div class="empty-state">Aucune session.</div>`;
+            return;
+        }
+
+        allSessions.slice().reverse().forEach(s => {
+            const dateStr = new Date(s.date).toLocaleString('fr-FR');
+            const row = `<tr>
+                <td>${dateStr}</td>
+                <td>${s.matiere || '-'}</td>
+                <td>${s.chapitre || '-'}</td>
+                <td>${s.duree}</td>
+                <td>${s.pauses || '0s'}</td>
+            </tr>`;
+            const card = `<div class="history-card">
+                <div><strong>Matière:</strong> ${s.matiere || '-'}</div>
+                <div><strong>Date:</strong> ${dateStr}</div>
+                <div><strong>Durée:</strong> ${s.duree}</div>
+            </div>`;
+            dom.historyBody.innerHTML += row;
+            dom.historyCards.innerHTML += card;
+        });
+    };
+
+    const renderStats = () => {
+        const now = new Date();
+        const startOfWeek = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
+        const firstDay = new Date(now.setDate(startOfWeek));
+        firstDay.setHours(0,0,0,0);
+
+        const thisWeekSessions = allSessions.filter(s => new Date(s.date) >= firstDay);
+        const totalMsThisWeek = thisWeekSessions.reduce((acc, s) => acc + s.dureeMs, 0);
+
+        dom.totalSemaine.textContent = `${(totalMsThisWeek / 3600000).toFixed(1)} h`;
+
+        const totalDays = Math.max(1, (new Date() - new Date(allSessions[0]?.date || new Date())) / 86400000);
+        const totalMs = allSessions.reduce((acc, s) => acc + s.dureeMs, 0);
+        dom.moyenneJour.textContent = `${(totalMs / totalDays / 3600000).toFixed(1)} h`;
+
+        const subjectTimes = allSessions.reduce((acc, s) => {
+            acc[s.matiere] = (acc[s.matiere] || 0) + s.dureeMs;
+            return acc;
+        }, {});
+
+        const topSubject = Object.entries(subjectTimes).sort((a,b) => b[1] - a[1])[0];
+        dom.topMatiere.textContent = topSubject ? topSubject[0] : '-';
+    };
+
+    const renderChart = () => {
+        const ctx = dom.chartCanvas.getContext('2d');
+        if (chart) chart.destroy();
+
+        const data = {
+            labels: [],
+            datasets: [{
+                label: 'Temps de révision (heures)',
+                data: [],
+                backgroundColor: 'rgba(79, 70, 229, 0.5)',
+                borderColor: 'rgba(79, 70, 229, 1)',
+                borderWidth: 1
+            }]
+        };
+
+        const subjectTimes = allSessions.reduce((acc, s) => {
+            if (!s.matiere) return acc;
+            acc[s.matiere] = (acc[s.matiere] || 0) + s.dureeMs / 3600000;
+            return acc;
+        }, {});
+
+        data.labels = Object.keys(subjectTimes);
+        data.datasets[0].data = Object.values(subjectTimes);
+
+        chart = new Chart(ctx, { type: 'bar', data, options: { scales: { y: { beginAtZero: true } } } });
+    };
 
     // --- TIMER LOGIC ---
     const updateTimerDisplay = () => {
         const now = Date.now();
         const diff = isRunning ? (now - startTime + elapsed) : elapsed;
-        timerDisplay.textContent = formatHMS(diff);
+        dom.timerDisplay.textContent = formatHMS(diff);
     };
 
     const startTimer = () => {
@@ -127,100 +218,170 @@ document.addEventListener('DOMContentLoaded', () => {
         startTime = Date.now();
         timerInterval = setInterval(updateTimerDisplay, 1000);
         updateButtonStates();
+        dom.pauseButton.textContent = 'Pause';
     };
 
     const pauseTimer = () => {
-        if (!isRunning) { // This is now a resume action
-             startTimer();
-             pauseButton.textContent = 'Pause';
-             return;
+        if (!isRunning) {
+            startTimer();
+            return;
         }
         clearInterval(timerInterval);
         elapsed += Date.now() - startTime;
         isRunning = false;
-        pauseButton.textContent = 'Reprendre';
         updateButtonStates();
+        dom.pauseButton.textContent = 'Reprendre';
     };
 
     const stopTimer = () => {
         if (isRunning) {
-            clearInterval(timerInterval);
-            elapsed += Date.now() - startTime;
+            pauseTimer();
+            isRunning = false; // pauseTimer sets it to false, but just to be sure
         }
-        isRunning = false;
+
+        if (elapsed === 0) return;
 
         const session = {
             date: new Date().toISOString(),
-            matiere: document.getElementById('subjectSelect').value || '',
-            chapitre: document.getElementById('chapterSelect').value || '',
+            matiere: dom.subjectSelect.value,
+            chapitre: dom.chapterSelect.value,
             duree: formatHMS(elapsed),
-            dureeMs: elapsed
+            dureeMs: elapsed,
+            pauses: "0s" // Placeholder
         };
         allSessions.push(session);
-        saveSessionsToStorage();
+        saveData('sessions', allSessions);
 
-        // Reset timer
         elapsed = 0;
         updateTimerDisplay();
         updateButtonStates();
-        updateAllUI(); // Refresh everything
+        updateAllUI();
         showNotification('Session enregistrée !');
     };
 
     const updateButtonStates = () => {
-        startButton.disabled = isRunning || elapsed > 0;
-        pauseButton.disabled = !isRunning && elapsed === 0;
-        stopButton.disabled = !isRunning && elapsed === 0;
+        dom.startButton.disabled = isRunning || elapsed > 0;
+        dom.pauseButton.disabled = !isRunning && elapsed === 0;
+        dom.stopButton.disabled = !isRunning && elapsed === 0;
     };
-
 
     // --- EVENT LISTENERS ---
     const setupEventListeners = () => {
-        startButton.addEventListener('click', startTimer);
-        pauseButton.addEventListener('click', pauseTimer);
-        stopButton.addEventListener('click', stopTimer);
-        
-        document.getElementById('addSubjectBtn').addEventListener('click', () => {
-             const name = document.getElementById('newSubjectInput').value.trim();
-             if(!name) {
-                 showNotification('Le nom de la matière ne peut pas être vide.', 'error');
-                 return;
-             }
-             allSubjects.push({ name: name, chapters: [] });
-             saveSubjectsToStorage();
-             updateAllUI();
-             showNotification('Matière ajoutée avec succès.');
-             document.getElementById('newSubjectInput').value = '';
+        dom.startButton.addEventListener('click', startTimer);
+        dom.pauseButton.addEventListener('click', pauseTimer);
+        dom.stopButton.addEventListener('click', stopTimer);
+
+        dom.addSubjectBtn.addEventListener('click', () => {
+            const name = dom.newSubjectInput.value.trim();
+            const chapter = dom.newChapterInput.value.trim();
+            if (!name) {
+                showNotification('Le nom de la matière est requis.', 'error');
+                return;
+            }
+            let subject = allSubjects.find(s => s.name === name);
+            if (!subject) {
+                subject = { name, chapters: [] };
+                allSubjects.push(subject);
+            }
+            if (chapter && !subject.chapters.includes(chapter)) {
+                subject.chapters.push(chapter);
+            }
+            saveData('subjects', allSubjects);
+            updateAllUI();
+            dom.newSubjectInput.value = '';
+            dom.newChapterInput.value = '';
+            showNotification('Matière/Chapitre ajouté.');
         });
-        
-        // Add listeners for nav buttons to switch tabs
-        document.querySelectorAll('nav button[data-tab]').forEach(button => {
+
+        dom.subjectSelect.addEventListener('change', (e) => renderChapterSelect(e.target.value));
+
+        dom.subjectsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-subject-btn')) {
+                const index = e.target.dataset.index;
+                if (confirm(`Supprimer la matière "${allSubjects[index].name}" ?`)) {
+                    allSubjects.splice(index, 1);
+                    saveData('subjects', allSubjects);
+                    updateAllUI();
+                    showNotification('Matière supprimée.', 'success');
+                }
+            }
+        });
+
+        dom.navButtons.forEach(button => {
             button.addEventListener('click', () => {
-                const tabId = button.getAttribute('data-tab');
-                showTab(tabId);
+                const tabId = button.dataset.tab;
+                dom.tabs.forEach(tab => tab.style.display = tab.id === tabId ? 'block' : 'none');
+                dom.navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
             });
         });
-        
-        // ... Add all other event listeners here (import, export, reset, etc.)
-    };
-    
-    const showTab = (tabId) => {
-        document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
-        document.getElementById(tabId).style.display = 'block';
 
-        document.querySelectorAll('nav button[data-tab]').forEach(b => {
-            b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
+        dom.resetButton.addEventListener('click', () => {
+            if (confirm('Voulez-vous vraiment tout réinitialiser ? Cette action est irréversible.')) {
+                localStorage.clear();
+                allSessions = [];
+                allSubjects = [];
+                elapsed = 0;
+                if(isRunning) clearInterval(timerInterval);
+                isRunning = false;
+                updateTimerDisplay();
+                updateButtonStates();
+                updateAllUI();
+                showNotification('Données réinitialisées.', 'success');
+            }
+        });
+
+        dom.exportButton.addEventListener('click', () => {
+            const dataStr = JSON.stringify({ exportedAt: new Date(), sessions: allSessions, subjects: allSubjects });
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `scanland_timer_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification('Données exportées.', 'success');
+        });
+
+        dom.importButton.addEventListener('click', () => dom.importFileInput.click());
+        dom.importFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (confirm("Remplacer les données existantes ? (Annuler pour fusionner)")) {
+                        allSessions = data.sessions || [];
+                        allSubjects = data.subjects || [];
+                    } else {
+                        // Simple merge logic
+                        allSessions.push(...(data.sessions || []));
+                        allSubjects.push(...(data.subjects || []));
+                    }
+                    saveData('sessions', allSessions);
+                    saveData('subjects', allSubjects);
+                    updateAllUI();
+                    showNotification('Données importées avec succès.', 'success');
+                } catch (err) {
+                    showNotification("Échec de l'importation. Fichier invalide.", 'error');
+                    console.error(err);
+                } finally {
+                    dom.importFileInput.value = ''; // Reset file input
+                }
+            };
+            reader.readAsText(file);
         });
     };
 
     // --- INITIALIZATION ---
     const init = () => {
-        loadDataFromStorage();
+        loadData();
         setupEventListeners();
         updateButtonStates();
-        showTab('timerTab'); // Show the main tab by default
+        document.querySelector('nav button[data-tab="timerTab"]').click(); // Show default tab
         updateAllUI();
+        updateTimerDisplay();
     };
 
-    init(); // Start the application
+    init();
 });
